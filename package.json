@@ -5,7 +5,9 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --mac dmg"
+    "build": "electron-builder --mac --universal",
+    "build:arm64": "electron-builder --mac --arm64",
+    "build:x64": "electron-builder --mac --x64"
   },
   "build": {
     "appId": "com.anthropic.token",
@@ -18,7 +20,10 @@
     "dmg": {
       "title": "Claude Code Token Generator & OpenClaw Applier"
     },
-    "files": ["main.js", "index.html"],
+    "files": [
+      "main.js",
+      "index.html"
+    ],
     "extraResources": []
   },
   "devDependencies": {
