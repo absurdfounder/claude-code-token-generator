@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code Token Generator & OpenClaw Applier</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0e8da; color: #2c1a10; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .card { background: #faf5ee; border: 1px solid #e4d4c0; border-radius: 18px; padding: 48px; max-width: 560px; width: 100%; box-shadow: 0 2px 24px rgba(180,110,70,0.08); }
+    .logo { width: 52px; height: 52px; margin-bottom: 18px; }
+    h1 { font-size: 22px; font-weight: 650; margin-bottom: 6px; color: #1e1008; letter-spacing: -0.3px; }
+    .subtitle { color: #9a7060; font-size: 13.5px; margin-bottom: 32px; }
+    .btn { width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 14.5px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+    .btn-primary { background: #c96b4a; color: #fff; }
+    .btn-primary:hover { background: #b85c3c; }
+    .btn-primary:disabled { background: #d9c5b5; color: #a08070; cursor: not-allowed; }
+    .btn-copy { background: #f0e8da; color: #5a3a28; border: 1px solid #d9c4af; margin-top: 10px; }
+    .btn-copy:hover { background: #e8d9c8; }
+    .status { margin-top: 22px; padding: 14px 16px; border-radius: 10px; font-size: 13px; display: none; }
+    .status.pending { display: block; background: #fef9ec; border: 1px solid #e8c97a; color: #8a6010; }
+    .status.success { display: block; background: #f0f9f0; border: 1px solid #7ec89a; color: #1a5e30; }
+    .status.error { display: block; background: #fdf2f0; border: 1px solid #e09080; color: #8a2010; }
+    .token-box { margin-top: 16px; background: #f0e8da; border: 1px solid #d9c4af; border-radius: 10px; padding: 14px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; word-break: break-all; line-height: 1.7; color: #7a5040; }
+    .token-box .label { color: #b08060; }
+    .token-box .value { color: #4a2e1e; }
+    .token-box .highlight { color: #c96b4a; font-weight: 600; }
+    .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+    .dot.green { background: #4caf6e; }
+    .dot.yellow { background: #d4a017; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .note { margin-top: 24px; padding: 14px 16px; background: #f0e8da; border-radius: 10px; font-size: 12px; color: #9a7060; line-height: 1.6; border: 1px solid #ddd0bc; }
+    .note code { background: #e8d9c8; padding: 2px 6px; border-radius: 4px; font-size: 11px; color: #7a5040; }
+    .btn-apply { background: #3a7a52; color: #fff; margin-top: 10px; }
+    .btn-apply:hover { background: #2e6642; }
+    .btn-apply:disabled { background: #d9c5b5; color: #a08070; cursor: not-allowed; }
+    .terminal { margin-top: 16px; background: #1e120a; border: 1px solid #3a2418; border-radius: 10px; padding: 16px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; display: none; }
+    .terminal .step { margin-bottom: 12px; }
+    .terminal .step:last-child { margin-bottom: 0; }
+    .terminal .cmd { color: #b08060; }
+    .terminal .cmd::before { content: '$ '; color: #c96b4a; }
+    .terminal .out { color: #a08060; margin-top: 4px; padding-left: 12px; border-left: 2px solid #3a2418; white-space: pre-wrap; word-break: break-all; }
+    .terminal .out.ok { border-left-color: #2e6642; color: #7ec89a; }
+    .terminal .out.err { border-left-color: #8a2010; color: #e09080; }
+    .apply-status { margin-top: 12px; padding: 12px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; display: none; }
+    .apply-status.success { display: block; background: #f0f9f0; border: 1px solid #7ec89a; color: #1a5e30; }
+    .apply-status.error { display: block; background: #fdf2f0; border: 1px solid #e09080; color: #8a2010; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" fill="#f0e8da" rx="20"/>
+      <g stroke="#c96b4a" stroke-width="6" stroke-linecap="round">
+        <line x1="50" y1="34" x2="50" y2="8"/>
+        <line x1="64.3" y1="37.5" x2="77.6" y2="14.4"/>
+        <line x1="73.5" y1="50" x2="96.6" y2="50"/>
+        <line x1="64.3" y1="62.5" x2="77.6" y2="85.6"/>
+        <line x1="50" y1="66" x2="50" y2="92"/>
+        <line x1="35.7" y1="62.5" x2="22.4" y2="85.6"/>
+        <line x1="26.5" y1="50" x2="3.4" y2="50"/>
+        <line x1="35.7" y1="37.5" x2="22.4" y2="14.4"/>
+        <line x1="59.2" y1="30.5" x2="68.6" y2="11.7"/>
+        <line x1="69.5" y1="40.8" x2="88.3" y2="31.4"/>
+        <line x1="69.5" y1="59.2" x2="88.3" y2="68.6"/>
+        <line x1="59.2" y1="69.5" x2="68.6" y2="88.3"/>
+        <line x1="40.8" y1="69.5" x2="31.4" y2="88.3"/>
+        <line x1="30.5" y1="59.2" x2="11.7" y2="68.6"/>
+        <line x1="30.5" y1="40.8" x2="11.7" y2="31.4"/>
+        <line x1="40.8" y1="30.5" x2="31.4" y2="11.7"/>
+      </g>
+    </svg>
+    <h1>Claude Code Token Generator</h1>
+    <p class="subtitle">OAuth Authorization Code + PKCE &nbsp;·&nbsp; OpenClaw Applier</p>
+
+    <button class="btn btn-primary" id="startBtn" onclick="startAuth()">Sign in with Claude</button>
+
+    <div class="status" id="status"></div>
+
+    <div id="tokenArea" style="display:none">
+      <div class="token-box" id="tokenBox"></div>
+      <button class="btn btn-copy" id="copyBtn" onclick="copyToken()">📋 Copy Access Token</button>
+      <button class="btn btn-apply" id="applyBtn" onclick="applyKey()">⚡ Apply the Key</button>
+      <div class="terminal" id="terminal"></div>
+      <div class="apply-status" id="applyStatus"></div>
+    </div>
+
+    <div class="note" id="note" style="border-left: 3px solid #166534;">
+      ✅ Server running — click the button above to get your token
+    </div>
+  </div>
+
+  <script>
+    // --- Anthropic OAuth Constants ---
+    const CLIENT_ID = '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
+    const AUTHORIZE_URL = 'https://claude.ai/oauth/authorize';
+    const TOKEN_URL = 'https://platform.claude.com/v1/oauth/token';
+    const SCOPES = 'user:inference';
+
+    // Use the server if available, otherwise try direct (will fail on CORS)
+    const SERVER_PORT = 17249;
+    const SERVER = `http://127.0.0.1:${SERVER_PORT}`;
+
+    let currentToken = null;
+    let currentSessionId = null;
+    let pollInterval = null;
+
+    // Check on load if we're returning from OAuth redirect (server mode handles this via /callback)
+    // For pure client-side, check URL params
+    window.addEventListener('load', async () => {
+      // Check if server is running
+      try {
+        const res = await fetch(`${SERVER}/health`, { signal: AbortSignal.timeout(2000) });
+        if (res.ok) {
+          document.getElementById('note').innerHTML = '✅ Server detected at <code>localhost:3456</code> — ready to go!';
+          document.getElementById('note').style.borderLeft = '3px solid #166534';
+        }
+      } catch {
+        // Server not running
+      }
+
+      // Check if returning from OAuth (client-side fallback)
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('code') && params.get('state')) {
+        await handleCallback(params.get('code'), params.get('state'));
+      }
+    });
+
+    // --- PKCE Helpers ---
+    function base64url(buffer) {
+      return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    async function generatePKCE() {
+      const verifierBytes = crypto.getRandomValues(new Uint8Array(32));
+      const verifier = base64url(verifierBytes);
+      const challengeBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+      const challenge = base64url(challengeBuffer);
+      return { verifier, challenge };
+    }
+
+    function generateState() {
+      return base64url(crypto.getRandomValues(new Uint8Array(16)));
+    }
+
+    // --- Auth Flow ---
+    async function startAuth() {
+      const btn = document.getElementById('startBtn');
+      const status = document.getElementById('status');
+      const tokenArea = document.getElementById('tokenArea');
+      btn.disabled = true;
+      btn.textContent = 'Starting...';
+      tokenArea.style.display = 'none';
+
+      // Try server-assisted flow first
+      let serverAvailable = false;
+      try {
+        const res = await fetch(`${SERVER}/health`, { signal: AbortSignal.timeout(2000) });
+        serverAvailable = res.ok;
+      } catch {}
+
+      if (serverAvailable) {
+        return startServerFlow(btn, status);
+      } else {
+        return startClientFlow(btn, status);
+      }
+    }
+
+    // --- Server-Assisted Flow (reliable) ---
+    async function startServerFlow(btn, status) {
+      try {
+        const res = await fetch(`${SERVER}/api/auth/start`);
+        const data = await res.json();
+        currentSessionId = data.session_id;
+
+        window.open(data.authorization_url, '_blank', 'width=500,height=700');
+
+        status.className = 'status pending';
+        status.innerHTML = '<span class="dot yellow"></span> Waiting for you to log in at claude.ai...';
+        btn.textContent = 'Waiting for authorization...';
+
+        pollInterval = setInterval(async () => {
+          try {
+            const r = await fetch(`${SERVER}/api/auth/token/${currentSessionId}`);
+            const d = await r.json();
+            if (d.status === 'complete') {
+              clearInterval(pollInterval);
+              showToken(d.access_token, d.refresh_token, d.expires_in, d.scope);
+              btn.disabled = false;
+              btn.textContent = 'Sign in again';
+            }
+          } catch {}
+        }, 2000);
+      } catch (err) {
+        status.className = 'status error';
+        status.textContent = `Failed: ${err.message}`;
+        btn.disabled = false;
+        btn.textContent = 'Sign in with Claude';
+      }
+    }
+
+    // --- Pure Client-Side Flow (CORS may block token exchange) ---
+    async function startClientFlow(btn, status) {
+      try {
+        const { verifier, challenge } = await generatePKCE();
+        const state = generateState();
+        const redirectUri = window.location.origin + window.location.pathname;
+
+        // Store in sessionStorage for callback
+        sessionStorage.setItem('oauth_verifier', verifier);
+        sessionStorage.setItem('oauth_state', state);
+        sessionStorage.setItem('oauth_redirect', redirectUri);
+
+        const authUrl = new URL(AUTHORIZE_URL);
+        authUrl.searchParams.set('code', 'true');
+        authUrl.searchParams.set('client_id', CLIENT_ID);
+        authUrl.searchParams.set('response_type', 'code');
+        authUrl.searchParams.set('redirect_uri', redirectUri);
+        authUrl.searchParams.set('scope', SCOPES);
+        authUrl.searchParams.set('code_challenge', challenge);
+        authUrl.searchParams.set('code_challenge_method', 'S256');
+        authUrl.searchParams.set('state', state);
+
+        // Redirect current page (not popup, since we need the redirect back here)
+        window.location.href = authUrl.toString();
+      } catch (err) {
+        status.className = 'status error';
+        status.textContent = `Failed: ${err.message}`;
+        btn.disabled = false;
+        btn.textContent = 'Sign in with Claude';
+      }
+    }
+
+    // --- Handle OAuth callback (client-side) ---
+    async function handleCallback(code, state) {
+      const status = document.getElementById('status');
+      const btn = document.getElementById('startBtn');
+      btn.disabled = true;
+      btn.textContent = 'Exchanging code...';
+
+      const savedState = sessionStorage.getItem('oauth_state');
+      const verifier = sessionStorage.getItem('oauth_verifier');
+      const redirectUri = sessionStorage.getItem('oauth_redirect');
+
+      if (state !== savedState) {
+        status.className = 'status error';
+        status.textContent = 'State mismatch — possible CSRF attack. Try again.';
+        btn.disabled = false;
+        btn.textContent = 'Sign in with Claude';
+        return;
+      }
+
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+
+      status.className = 'status pending';
+      status.innerHTML = '<span class="dot yellow"></span> Exchanging authorization code for token...';
+
+      try {
+        const res = await fetch(TOKEN_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            grant_type: 'authorization_code',
+            code,
+            redirect_uri: redirectUri,
+            client_id: CLIENT_ID,
+            code_verifier: verifier,
+            state,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.access_token) {
+          showToken(data.access_token, data.refresh_token, data.expires_in, data.scope);
+        } else {
+          status.className = 'status error';
+          status.textContent = `Token exchange failed: ${JSON.stringify(data)}`;
+        }
+      } catch (err) {
+        status.className = 'status error';
+        status.innerHTML = `
+          CORS blocked the token exchange (browser security).<br><br>
+          <strong>You need the server running:</strong><br>
+          1. Open terminal → <code>node server.js</code><br>
+          2. Open <code>http://localhost:3456</code> instead<br>
+          3. Click "Sign in with Claude" there
+        `;
+      }
+
+      // Cleanup
+      sessionStorage.removeItem('oauth_verifier');
+      sessionStorage.removeItem('oauth_state');
+      sessionStorage.removeItem('oauth_redirect');
+      btn.disabled = false;
+      btn.textContent = 'Sign in with Claude';
+    }
+
+    // --- Display Token ---
+    function showToken(accessToken, refreshToken, expiresIn, scope) {
+      currentToken = accessToken;
+      const status = document.getElementById('status');
+      status.className = 'status success';
+      status.innerHTML = '<span class="dot green"></span> Token acquired!';
+
+      document.getElementById('tokenBox').innerHTML = `
+        <span class="label">access_token:</span> <span class="highlight">${accessToken.slice(0, 25)}...${accessToken.slice(-10)}</span><br>
+        <span class="label">refresh_token:</span> <span class="value">${refreshToken ? refreshToken.slice(0, 20) + '...' : 'n/a'}</span><br>
+        <span class="label">expires_in:</span> <span class="value">${expiresIn}s</span><br>
+        <span class="label">scope:</span> <span class="value">${scope || 'user:inference'}</span>`;
+
+      document.getElementById('tokenArea').style.display = 'block';
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('startBtn').textContent = 'Sign in again';
+    }
+
+    // --- Apply the Key ---
+    async function applyKey() {
+      if (!currentToken) return;
+      const btn = document.getElementById('applyBtn');
+      const terminal = document.getElementById('terminal');
+      const applyStatus = document.getElementById('applyStatus');
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Applying...';
+      terminal.style.display = 'block';
+      terminal.innerHTML = '<span style="color:#737373">Running commands...</span>';
+      applyStatus.className = 'apply-status';
+
+      try {
+        const res = await fetch(`${SERVER}/api/apply-key`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ access_token: currentToken }),
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          terminal.innerHTML = `<span style="color:#f87171">Error: ${data.error}</span>`;
+          applyStatus.className = 'apply-status error';
+          applyStatus.textContent = '❌ Failed to apply key';
+          btn.disabled = false;
+          btn.textContent = '⚡ Apply the Key';
+          return;
+        }
+
+        terminal.innerHTML = data.steps.map((s, i) => `
+          <div class="step">
+            <div class="cmd">${escapeHtml(s.cmd)}</div>
+            <div class="out ${s.ok ? 'ok' : 'err'}">${escapeHtml(s.output)}</div>
+          </div>
+        `).join('');
+
+        if (data.success) {
+          applyStatus.className = 'apply-status success';
+          applyStatus.innerHTML = '✅ Key successfully applied — OpenClaw gateway restarted';
+        } else {
+          applyStatus.className = 'apply-status error';
+          applyStatus.innerHTML = '❌ Key mismatch — check terminal output above';
+        }
+      } catch (err) {
+        terminal.innerHTML = `<span style="color:#f87171">${escapeHtml(err.message)}</span>`;
+        applyStatus.className = 'apply-status error';
+        applyStatus.textContent = '❌ Failed — is the server running?';
+      }
+
+      btn.disabled = false;
+      btn.textContent = '⚡ Apply the Key';
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // --- Copy ---
+    function copyToken() {
+      if (!currentToken) return;
+      navigator.clipboard.writeText(currentToken).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = '📋 Copy Access Token', 2000);
+      });
+    }
+  </script>
+</body>
+</html>

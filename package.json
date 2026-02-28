@@ -1,0 +1,28 @@
+{
+  "name": "anthropic-token",
+  "version": "1.0.0",
+  "description": "Get Anthropic OAuth tokens with one click",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac dmg"
+  },
+  "build": {
+    "appId": "com.anthropic.token",
+    "productName": "Claude Code Token Generator & OpenClaw Applier",
+    "mac": {
+      "target": "dmg",
+      "icon": "icon.icns",
+      "category": "public.app-category.developer-tools"
+    },
+    "dmg": {
+      "title": "Claude Code Token Generator & OpenClaw Applier"
+    },
+    "files": ["main.js", "index.html"],
+    "extraResources": []
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}
