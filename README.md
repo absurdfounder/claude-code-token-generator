@@ -2,7 +2,7 @@
 
 A macOS menubar app that generates a fresh Anthropic OAuth token via Claude's Authorization Code + PKCE flow and automatically applies it to your OpenClaw gateway — no manual config file editing required.
 
-![App Screenshot](screenshot.png)
+![App Screenshot](image.png)
 
 ---
 
